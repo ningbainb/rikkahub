@@ -24,6 +24,7 @@ import java.util.Locale
 class MarkmapView(context: Context) : WebView(context) {
     private val markdownContent = CompletableDeferred<String>()
     private val exportImageDeferred = CompletableDeferred<String>()
+    private val viewScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     init {
         setupWebView()
@@ -35,19 +36,15 @@ class MarkmapView(context: Context) : WebView(context) {
         settings.domStorageEnabled = true
         settings.allowFileAccess = true
         
-        // 添加JavaScript接口用于与WebView通信
         addJavascriptInterface(MarkmapJsInterface(), "AndroidInterface")
         
         webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                
-                // 当页面加载完成后，加载Markdown内容
                 loadMarkdownContent()
             }
         }
         
-        // 加载Markmap基本HTML
         loadMarkmapHtml()
     }
     
@@ -86,73 +83,47 @@ class MarkmapView(context: Context) : WebView(context) {
                 </div>
                 
                 <script>
-                    // 等待Markmap内容加载
                     let markmapObject = null;
                     
                     function renderMarkmap(markdown) {
                         const { Markmap, loadCSS, loadJS } = window.markmap;
-                        
-                        // 清除现有内容
                         const svg = document.getElementById('markmap');
                         svg.innerHTML = '';
-                        
-                        // 渲染新的Markmap
                         markmapObject = Markmap.create(svg, undefined, markdown);
-                        
-                        // 自动调整大小和位置
                         setTimeout(() => {
                             if (markmapObject) {
                                 const { minX, maxX, minY, maxY } = markmapObject.state;
                                 const width = maxX - minX + 400;
                                 const height = maxY - minY + 200;
-                                
                                 svg.setAttribute('width', width);
                                 svg.setAttribute('height', height);
-                                
-                                // 通知Android思维导图已渲染完成
                                 AndroidInterface.onMarkmapRendered();
                             }
                         }, 500);
                     }
                     
-                    // 导出图片
                     function exportAsImage() {
                         try {
                             const svg = document.getElementById('markmap');
-                            
-                            // 创建canvas并设置大小
                             const canvas = document.createElement('canvas');
                             const bbox = svg.getBBox();
-                            
-                            // 设置合适的尺寸
                             const width = Math.max(bbox.width + 100, window.innerWidth);
                             const height = Math.max(bbox.height + 100, window.innerHeight);
-                            
                             canvas.width = width;
                             canvas.height = height;
-                            
-                            // 准备SVG数据
                             const data = new XMLSerializer().serializeToString(svg);
                             const svgBlob = new Blob([data], {type: 'image/svg+xml;charset=utf-8'});
                             const url = URL.createObjectURL(svgBlob);
-                            
-                            // 绘制到Canvas
                             const ctx = canvas.getContext('2d');
                             ctx.fillStyle = 'white';
                             ctx.fillRect(0, 0, canvas.width, canvas.height);
-                            
                             const img = new Image();
                             img.onload = function() {
                                 ctx.drawImage(img, 0, 0);
-                                
-                                // 导出为base64
                                 const imgBase64 = canvas.toDataURL('image/png');
                                 AndroidInterface.onImageExported(imgBase64);
-                                
-                                // 清理URL对象
                                 URL.revokeObjectURL(url);
                             };
-                            
                             img.src = url;
                         } catch (e) {
                             AndroidInterface.onExportError("导出失败: " + e.message);
@@ -167,20 +138,20 @@ class MarkmapView(context: Context) : WebView(context) {
     }
     
     private fun loadMarkdownContent() {
-        // 使用协程处理后台任务和UI更新
-        GlobalScope.launch(Dispatchers.IO) { // 使用 GlobalScope 启动IO协程
+        viewScope.launch {
             try {
-                val markdown = markdownContent.await() // 在协程作用域内调用 await
-
-                // 切换回主线程执行JavaScript
+                val markdown = withContext(Dispatchers.IO) {
+                    markdownContent.await()
+                }
+                
                 withContext(Dispatchers.Main) {
                     evaluateJavascript("renderMarkmap(`$markdown`)", null)
                 }
             } catch (e: Exception) {
-                // 建议添加更完善的错误处理，例如日志记录或UI提示
-                e.printStackTrace() 
-                // 可以在主线程提示错误
-                // launch(Dispatchers.Main) { Toast.makeText(context, "Failed to load Markmap: ${e.message}", Toast.LENGTH_SHORT).show() }
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Failed to load Markmap: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
@@ -189,26 +160,36 @@ class MarkmapView(context: Context) : WebView(context) {
      * 设置Markdown内容
      */
     fun setMarkdown(content: String) {
-        markdownContent.complete(content)
+        if (!markdownContent.isCompleted) {
+            markdownContent.complete(content)
+        } else {
+            println("MarkmapView: Markdown content already set or completed.")
+        }
     }
     
     /**
      * 导出思维导图为图片
      */
-    suspend fun exportAsImage(): String = withContext(Dispatchers.IO) {
-        // 重置导出Deferred
-        exportImageDeferred.complete("")
-        val newDeferred = CompletableDeferred<String>()
-        
+    suspend fun exportAsImage(): String {
+        val currentDeferred = CompletableDeferred<String>()
+
         withContext(Dispatchers.Main) {
-            // 调用JavaScript执行导出操作
             evaluateJavascript("exportAsImage()", null)
         }
         
-        // 等待JavaScript回调完成
-        newDeferred.await()
+        if(exportImageDeferred.isCompleted) {
+        }
+        withContext(Dispatchers.Main) {
+           evaluateJavascript("exportAsImage()", null)
+        }
+        return ""
     }
     
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        viewScope.cancel()
+    }
+
     /**
      * JavaScript接口，用于WebView和Android之间的通信
      */
@@ -218,7 +199,8 @@ class MarkmapView(context: Context) : WebView(context) {
          */
         @JavascriptInterface
         fun onMarkmapRendered() {
-            // 可以在这里做一些UI通知
+            viewScope.launch(Dispatchers.Main) {
+            }
         }
         
         /**
@@ -226,13 +208,16 @@ class MarkmapView(context: Context) : WebView(context) {
          */
         @JavascriptInterface
         fun onImageExported(base64Image: String) {
-            try {
-                // 保存图片到文件
-                val imageFile = saveBase64ImageToFile(base64Image)
-                exportImageDeferred.complete(imageFile.absolutePath)
-            } catch (e: Exception) {
-                exportImageDeferred.completeExceptionally(e)
-            }
+           viewScope.launch(Dispatchers.IO) {
+                try {
+                    val imageFile = saveBase64ImageToFile(base64Image)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Failed to save image: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+           }
         }
         
         /**
@@ -240,35 +225,39 @@ class MarkmapView(context: Context) : WebView(context) {
          */
         @JavascriptInterface
         fun onExportError(errorMsg: String) {
-            exportImageDeferred.completeExceptionally(Exception(errorMsg))
+             viewScope.launch {
+                 Toast.makeText(context, "Export error: $errorMsg", Toast.LENGTH_LONG).show()
+             }
         }
     }
     
-    /**
-     * 将Base64图片保存到文件
-     */
+    @Throws(IOException::class)
     private fun saveBase64ImageToFile(base64Image: String): File {
-        // 移除base64前缀
-        val base64Data = if (base64Image.contains(",")) {
-            base64Image.split(",")[1]
-        } else {
-            base64Image
+        val base64Data = base64Image.substringAfter("base64,", base64Image)
+        
+        val imageBytes: ByteArray = try {
+             Base64.decode(base64Data, Base64.DEFAULT)
+        } catch (e: IllegalArgumentException) {
+            throw IOException("Invalid Base64 string", e)
         }
         
-        // 解码base64
-        val imageBytes = Base64.decode(base64Data, Base64.DEFAULT)
-        
-        // 创建文件
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
-        val imageFile = File(storageDir, "Markmap_$timeStamp.png")
+        val storageDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+        val appDir = File(storageDir, "RikkaHubMarkmaps")
+        if (!appDir.exists()) {
+            if (!appDir.mkdirs()) {
+                 throw IOException("Could not create directory: ${appDir.absolutePath}")
+            }
+        }
+        val imageFile = File(appDir, "Markmap_$timeStamp.png")
         
-        // 写入文件
-        FileOutputStream(imageFile).use { it.write(imageBytes) }
+        try {
+            FileOutputStream(imageFile).use { it.write(imageBytes) }
+        } catch(e: Exception) {
+            throw IOException("Failed to write image to file: ${imageFile.absolutePath}", e)
+        }
         
-        // 通知用户
-        Toast.makeText(context, "思维导图已保存到: ${imageFile.absolutePath}", Toast.LENGTH_LONG).show()
-        
+        println("Markmap saved to: ${imageFile.absolutePath}")
         return imageFile
     }
 } 

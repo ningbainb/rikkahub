@@ -27,14 +27,20 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     tasks.withType<KotlinCompile>().configureEach {
         compilerOptions.optIn.add("kotlin.uuid.ExperimentalUuidApi")
+    }
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
     }
 }
 
@@ -46,11 +52,12 @@ dependencies {
     // WebView相关库
     implementation("androidx.webkit:webkit:1.7.0")
     
-    // Compose相关库
-    implementation("androidx.compose.ui:ui:1.6.0")
-    implementation("androidx.compose.material3:material3:1.2.0")
-    implementation("androidx.compose.ui:ui-tooling-preview:1.6.0")
-    implementation("androidx.compose.foundation:foundation:1.6.0")
+    // Compose相关库 - Managed by BOM
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.material3)
+    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.foundation)
 
     implementation(libs.okhttp)
     implementation(libs.okhttp.sse)

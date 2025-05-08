@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: 设置JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'  # Eclipse Temurin发行版
@@ -28,7 +28,7 @@ jobs:
       run: ./gradlew assembleDebug --stacktrace
     
     - name: 上传APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  # 升级到v4版本
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk

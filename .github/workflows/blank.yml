@@ -1,0 +1,93 @@
+name: Android CI Build
+
+on:
+  push:
+    branches: [ main, master, develop ] # 根据您的分支策略调整
+  pull_request:
+    branches: [ main, master, develop ] # 根据您的分支策略调整
+  workflow_dispatch: # 允许手动触发工作流
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # 使用最新的Ubuntu运行器
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4 # 使用最新的checkout action
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4 # 使用最新的setup-java action
+      with:
+        java-version: '17'
+        distribution: 'temurin' # Eclipse Temurin 是一个推荐的OpenJDK发行版
+        cache: 'gradle' # 缓存Gradle依赖，加快后续构建速度
+
+    - name: Create a dummy google-services.json for CI
+      # Google Services插件在构建时需要此文件。
+      # 对于CI环境，如果不需要实际的Firebase功能，可以创建一个虚拟文件。
+      # **重要**: 请确保下面的 `package_name` 和 `mobilesdk_app_id` 中的包名与您项目的实际 `applicationId` 一致。
+      # 从您之前的日志看，包名是 "me.rerere.rikkahub"。
+      run: |
+        mkdir -p app # 确保app目录存在 (如果您的应用模块不是 'app'，请修改这里)
+        echo '{
+          "project_info": {
+            "project_number": "123456789012", # 虚拟项目编号
+            "firebase_url": "https://dummy-project.firebaseio.com", # 虚拟URL
+            "project_id": "dummy-project-id", # 虚拟项目ID
+            "storage_bucket": "dummy-project-id.appspot.com" # 虚拟存储桶
+          },
+          "client": [
+            {
+              "client_info": {
+                "mobilesdk_app_id": "1:123456789012:android:me.rerere.rikkahub", # 将 'me.rerere.rikkahub' 替换为您的实际包名
+                "android_client_info": {
+                  "package_name": "me.rerere.rikkahub" # 将 'me.rerere.rikkahub' 替换为您的实际包名
+                }
+              },
+              "oauth_client": [],
+              "api_key": [
+                {
+                  "current_key": "dummy_api_key_for_ci" # 虚拟API密钥
+                }
+              ],
+              "services": {
+                "appinvite_service": {
+                  "other_platform_oauth_client": []
+                }
+              }
+            }
+          ],
+          "configuration_version": "1"
+        }' > app/google-services.json # 通常放置在主应用模块的根目录下
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x ./gradlew
+
+    - name: Clean project (optional)
+      # 在某些情况下，清理项目可以避免因旧的构建缓存导致的问题
+      run: ./gradlew clean
+
+    - name: Build Debug APK
+      # 确保 ':app:assembleDebug' 是您项目正确的构建任务。
+      # 如果您的主应用模块不是 'app'，请将其替换为实际的模块名，例如 ':your-app-module:assembleDebug'。
+      run: ./gradlew :app:assembleDebug --stacktrace
+      # 使用 --stacktrace 参数可以在构建失败时提供更详细的错误信息。
+
+    - name: List APKs in output directory (for debugging if upload fails)
+      # 此步骤用于调试，如果APK上传失败，可以帮助确认APK的实际路径和名称。
+      run: |
+        echo "Searching for APKs in app/build/outputs/apk/debug/"
+        ls -R app/build/outputs/apk/debug/ || echo "Debug APK directory for 'app' module not found or empty."
+        echo "-----------------------------------------------------"
+        echo "Searching for APKs in the entire workspace:"
+        find . -name "*.apk" -ls
+
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4 # 使用最新的upload-artifact action
+      with:
+        name: app-debug-apk # 上传的构建产物的名称
+        # **重要**: 验证此路径是否与您项目实际的APK输出路径和名称匹配。
+        # 通常对于名为 'app' 的模块，路径是 'app/build/outputs/apk/debug/app-debug.apk'。
+        # 使用通配符 '*' 可以匹配文件名中的变量部分（如版本号），但要确保目录正确。
+        path: app/build/outputs/apk/debug/*.apk
+        if-no-files-found: error # 如果在此路径下找不到文件，则此步骤会失败

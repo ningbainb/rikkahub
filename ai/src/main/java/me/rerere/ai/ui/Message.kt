@@ -70,6 +70,10 @@ data class UIMessage(
                         }
                     }
 
+                    is UIMessagePart.Markmap -> {
+                        acc + UIMessagePart.Markmap(deltaPart.content)
+                    }
+
                     is UIMessagePart.ToolCall -> {
                         if (deltaPart.toolCallId.isBlank()) {
                             val lastToolCall =
@@ -268,6 +272,9 @@ sealed class UIMessagePart {
 
     @Serializable
     data class Search(val search: SearchResult) : UIMessagePart()
+
+    @Serializable
+    data class Markmap(val content: String) : UIMessagePart()
 
     @Serializable
     data class ToolCall(

@@ -138,20 +138,22 @@ class MarkmapView(context: Context) : WebView(context) {
     }
     
     private fun loadMarkdownContent() {
-        viewScope.launch {
+        println("MarkmapView: Attempting to load markdown content...")
+        GlobalScope.launch(Dispatchers.Main) {
             try {
+                println("MarkmapView: Coroutine launched. Awaiting markdown...")
                 val markdown = withContext(Dispatchers.IO) {
                     markdownContent.await()
                 }
-                
-                withContext(Dispatchers.Main) {
-                    evaluateJavascript("renderMarkmap(`$markdown`)", null)
-                }
+                println("MarkmapView: Markdown received. Evaluating JavaScript...")
+                evaluateJavascript("renderMarkmap(`$markdown`)", null)
+                println("MarkmapView: JavaScript evaluation called.")
+            } catch (e: CancellationException) {
+                println("MarkmapView: Coroutine cancelled during markdown load.")
             } catch (e: Exception) {
                 e.printStackTrace()
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Failed to load Markmap: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+                println("MarkmapView: Error loading markdown: ${e.message}")
+                Toast.makeText(context, "Failed to load Markmap: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -160,10 +162,12 @@ class MarkmapView(context: Context) : WebView(context) {
      * 设置Markdown内容
      */
     fun setMarkdown(content: String) {
+        println("MarkmapView: Setting markdown content...")
         if (!markdownContent.isCompleted) {
             markdownContent.complete(content)
+            println("MarkmapView: Markdown content completed.")
         } else {
-            println("MarkmapView: Markdown content already set or completed.")
+            println("MarkmapView: Markdown content already set or completed. Ignoring.")
         }
     }
     

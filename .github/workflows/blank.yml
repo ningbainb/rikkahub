@@ -5,7 +5,7 @@ on:
     branches: [ main, master, develop ]
   pull_request:
     branches: [ main, master, develop ]
-  workflow_dispatch:  # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,9 +18,14 @@ jobs:
       uses: actions/setup-java@v4
       with:
         java-version: '17'
-        distribution: 'temurin'  # Eclipse Temurin发行版
+        distribution: 'temurin'
         cache: gradle
     
+    # 添加这一步 - 创建空的google-services.json文件
+    - name: 创建Google Services配置
+      run: |
+        echo '{"project_info":{"project_id":"dummy-project","project_number":"123456789","name":"DummyProject"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789:android:1234567890abcdef"}}]}' > app/google-services.json
+      
     - name: 授予Gradle执行权限
       run: chmod +x ./gradlew
     
@@ -28,7 +33,7 @@ jobs:
       run: ./gradlew assembleDebug --stacktrace
     
     - name: 上传APK
-      uses: actions/upload-artifact@v4  # 升级到v4版本
+      uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: app/build/outputs/apk/debug/app-debug.apk

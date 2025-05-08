@@ -10,9 +10,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -169,19 +167,22 @@ class MarkmapView(context: Context) : WebView(context) {
     }
     
     private fun loadMarkdownContent() {
-        // 等待Markdown内容准备好
-        Thread {
+        // 使用协程处理后台任务和UI更新
+        GlobalScope.launch(Dispatchers.IO) { // 使用 GlobalScope 启动IO协程
             try {
-                val markdown = markdownContent.await()
-                
-                // 执行JavaScript渲染Markmap
-                post {
+                val markdown = markdownContent.await() // 在协程作用域内调用 await
+
+                // 切换回主线程执行JavaScript
+                withContext(Dispatchers.Main) {
                     evaluateJavascript("renderMarkmap(`$markdown`)", null)
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                // 建议添加更完善的错误处理，例如日志记录或UI提示
+                e.printStackTrace() 
+                // 可以在主线程提示错误
+                // launch(Dispatchers.Main) { Toast.makeText(context, "Failed to load Markmap: ${e.message}", Toast.LENGTH_SHORT).show() }
             }
-        }.start()
+        }
     }
     
     /**

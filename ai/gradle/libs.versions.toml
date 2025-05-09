@@ -1,0 +1,56 @@
+[versions]
+agp = "8.9.2"
+kotlin = "1.9.22"
+coreKtx = "1.16.0"
+junit = "4.13.2"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+lifecycleRuntimeKtx = "2.8.7"
+activityCompose = "1.10.1"
+composeBom = "2024.05.00"
+navigationCompose = "2.8.9"
+markdown = "0.7.3"
+okhttp = "4.12.0"
+retrofit = "2.11.0"
+coil = "3.1.0"
+quickjs = "3.1.0"
+room = "2.7.1"
+koin = "4.0.4"
+datastore = "1.1.4"
+serialization-json = "1.8.1"
+kotlin-coroutines-core = "1.10.2"
+ksp = "1.9.22-1.0.17"
+paging = "3.3.6"
+lucide-icons = "1.1.0"
+ucrop = "4.1.0-non-native"
+image-viewer = "1.1.0-alpha.7"
+google-services = "4.4.2"
+firebase-bom = "33.13.0"
+firebase-crashlytics = "3.0.3"
+jsoup = "1.19.1"
+requery-sqlite = "3.45.0"
+zxing = "3.5.3"
+quickie-bundled = "1.10.0"
+sonner = "0.3.10"
+permissionsCompose = "0.0.1+4"
+leakcanary = "2.14"
+workmanager = "2.10.1"
+reorderable = "2.4.3"
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics" }
+
+[libraries]
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" } 

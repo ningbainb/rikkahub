@@ -31,9 +31,9 @@ jobs:
       # 重要: 确保下面的包名 'me.rerere.rikkahub' 与您项目的 applicationId 一致。
       # 如果您的主应用模块不是 'app', 请修改下面的路径和包名。
       run: |
-        echo "Ensuring app module directory (default 'app') exists..."
+        echo "确保应用模块目录存在 (默认为 'app')..."
         mkdir -p app # 如果您的应用模块目录不是 'app'，请修改这里
-        echo "Creating dummy google-services.json..."
+        echo "正在创建虚拟 google-services.json..."
         echo '{
           "project_info": {
             "project_number": "123456789012",
@@ -46,22 +46,22 @@ jobs:
               "client_info": {
                 "mobilesdk_app_id": "1:123456789012:android:me.rerere.rikkahub",
                 "android_client_info": {
-                  "package_name": "me.rerere.rikkahub" 
+                  "package_name": "me.rerere.rikkahub"
                 }
               },
               "oauth_client": [],
-              "api_key": [ { "current_key": "dummy_api_key_for_ci" } ],
-              "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              "api_key": [{ "current_key": "dummy_api_key_for_ci" }],
+              "services": {"appinvite_service": {"other_platform_oauth_client": []}}
             }
           ],
           "configuration_version": "1"
-        }' > app/google-services.json # 确认文件路径，如果主模块不是app，则为 your-app-module/google-services.json
-        echo "Dummy google-services.json created."
+        }' > app/google-services.json # 确认文件路径
+        echo "虚拟 google-services.json 创建完成。"
 
     - name: Grant execute permission for gradlew
       run: chmod +x ./gradlew
 
-    - name: Clean project (Optional)
+    - name: Clean project
       run: ./gradlew clean
 
     - name: Build Debug APK
@@ -69,9 +69,9 @@ jobs:
       # 如果主应用模块不是 'app'，请修改为 ':your-app-module:assembleDebug'。
       run: ./gradlew :app:assembleDebug --stacktrace
 
-    - name: Upload Debug APK Artifact
+    - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
         name: rikkahub-debug-apk
-        path: app/build/outputs/apk/debug/app-debug.apk # 确认APK路径, 如果主模块不是app, 路径会不同
-        if-no-files-found: error # 如果找不到APK文件则报错
+        path: app/build/outputs/apk/debug/app-debug.apk
+        if-no-files-found: error

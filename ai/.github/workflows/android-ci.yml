@@ -1,0 +1,77 @@
+name: Android CI Build
+
+on:
+  push:
+    branches: [ main, master, develop ] # 根据您的分支策略调整
+  pull_request:
+    branches: [ main, master, develop ] # 根据您的分支策略调整
+  workflow_dispatch: # 允许手动触发工作流
+
+jobs:
+  build:
+    name: Build Android App
+    runs-on: ubuntu-latest # 使用最新的Ubuntu运行器
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Validate Gradle Wrapper
+      uses: gradle/actions/wrapper-validation@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: 'gradle'
+
+    - name: Create dummy google-services.json for CI
+      # Google Services插件需要此文件。为CI环境创建虚拟文件。
+      # 重要: 确保下面的包名 'me.rerere.rikkahub' 与您项目的 applicationId 一致。
+      # 如果您的主应用模块不是 'app', 请修改下面的路径和包名。
+      run: |
+        echo "Ensuring app module directory (default 'app') exists..."
+        mkdir -p app # 如果您的应用模块目录不是 'app'，请修改这里
+        echo "Creating dummy google-services.json..."
+        echo '{
+          "project_info": {
+            "project_number": "123456789012",
+            "firebase_url": "https://dummy-project.firebaseio.com",
+            "project_id": "dummy-project-id",
+            "storage_bucket": "dummy-project-id.appspot.com"
+          },
+          "client": [
+            {
+              "client_info": {
+                "mobilesdk_app_id": "1:123456789012:android:me.rerere.rikkahub",
+                "android_client_info": {
+                  "package_name": "me.rerere.rikkahub" 
+                }
+              },
+              "oauth_client": [],
+              "api_key": [ { "current_key": "dummy_api_key_for_ci" } ],
+              "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+            }
+          ],
+          "configuration_version": "1"
+        }' > app/google-services.json # 确认文件路径，如果主模块不是app，则为 your-app-module/google-services.json
+        echo "Dummy google-services.json created."
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x ./gradlew
+
+    - name: Clean project (Optional)
+      run: ./gradlew clean
+
+    - name: Build Debug APK
+      # 重要: 确认 ':app:assembleDebug' 是正确的构建任务。
+      # 如果主应用模块不是 'app'，请修改为 ':your-app-module:assembleDebug'。
+      run: ./gradlew :app:assembleDebug --stacktrace
+
+    - name: Upload Debug APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: rikkahub-debug-apk
+        path: app/build/outputs/apk/debug/app-debug.apk # 确认APK路径, 如果主模块不是app, 路径会不同
+        if-no-files-found: error # 如果找不到APK文件则报错

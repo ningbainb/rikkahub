@@ -43,7 +43,7 @@ jobs:
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
 
       - name: Install Android SDK components
-        run: sdkmanager "platforms;android-37" "build-tools;37.0.0" "cmake;3.22.1"
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "cmake;3.22.1"
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
@@ -272,7 +272,7 @@ jobs:
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
 
       - name: Install Android SDK components
-        run: sdkmanager "platforms;android-37" "build-tools;37.0.0" "cmake;3.22.1"
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0" "cmake;3.22.1"
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
